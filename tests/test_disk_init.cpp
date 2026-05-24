@@ -31,12 +31,28 @@ TEST_CASE("initDisk places all particles in disk bounds", "[disk]") {
 
     for (int i = 0; i < 1000; ++i) {
         float r = std::sqrt(p.x[i]*p.x[i] + p.z[i]*p.z[i]);
-        REQUIRE(r >= cfg.disk_r_min * 0.99f);
-        REQUIRE(r <= cfg.disk_r_max * 1.01f);
+        REQUIRE(r >= cfg.disk_r_min - 1e-4f);
+        REQUIRE(r <= cfg.disk_r_max + 1e-4f);
         REQUIRE_THAT(p.mass[i],
             Catch::Matchers::WithinRel(cfg.particle_mass_msun, 0.001f));
     }
     freeParticlesCPU(p);
+}
+
+TEST_CASE("particlePhysicalRadius returns physically reasonable AU value", "[disk]") {
+    Config cfg;
+    cfg.particle_mass_msun = 3.003e-7f;  // 0.1 Earth mass
+
+    float r_au = particlePhysicalRadius(cfg);
+
+    // Expected: ~2.4e-5 AU (from mass/density calculation)
+    // mass_kg = 3.003e-7 * 1.989e30 ≈ 5.973e23 kg
+    // vol = mass_kg / 3000 ≈ 1.991e20 m^3
+    // r_m = cbrt(3*vol/(4*pi)) ≈ 3.614e6 m
+    // r_AU = r_m / 1.496e11 ≈ 2.416e-5 AU
+    REQUIRE(r_au > 1e-5f);
+    REQUIRE(r_au < 1e-4f);
+    REQUIRE_THAT(r_au, Catch::Matchers::WithinRel(2.416e-5f, 0.01f));
 }
 
 TEST_CASE("initDisk velocities are approximately circular", "[disk]") {

@@ -1,6 +1,7 @@
 #include "DiskInit.h"
 #include <cmath>
 #include <random>
+#include <stdexcept>
 
 static constexpr float PI        = 3.14159265358979f;
 static constexpr float AU_M      = 1.496e11f;   // 1 AU in metres
@@ -15,6 +16,13 @@ float particlePhysicalRadius(const Config& cfg) {
 }
 
 ParticleData initDisk(const Config& cfg, unsigned int seed) {
+    if (cfg.n_particles <= 0)
+        throw std::invalid_argument("initDisk: n_particles must be positive");
+    if (cfg.disk_r_min <= 0.0f)
+        throw std::invalid_argument("initDisk: disk_r_min must be positive");
+    if (cfg.disk_r_min >= cfg.disk_r_max)
+        throw std::invalid_argument("initDisk: disk_r_min must be less than disk_r_max");
+
     ParticleData p = allocateParticlesCPU(cfg.n_particles);
 
     std::mt19937 rng(seed);

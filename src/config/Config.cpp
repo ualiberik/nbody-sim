@@ -7,7 +7,12 @@ Config loadConfig(const std::string& path) {
     std::ifstream f(path);
     if (!f.is_open())
         throw std::runtime_error("Cannot open config: " + path);
-    nlohmann::json j = nlohmann::json::parse(f);
+    nlohmann::json j;
+    try {
+        j = nlohmann::json::parse(f);
+    } catch (const nlohmann::json::parse_error& e) {
+        throw std::runtime_error("JSON parse error in '" + path + "': " + e.what());
+    }
 
     Config cfg;
     cfg.n_particles            = j.value("n_particles", cfg.n_particles);
@@ -24,5 +29,13 @@ Config loadConfig(const std::string& path) {
     cfg.total_time             = j.value("total_time", cfg.total_time);
     cfg.output_every_n_steps   = j.value("output_every_n_steps", cfg.output_every_n_steps);
     cfg.output_dir             = j.value("output_dir", cfg.output_dir);
+
+    if (cfg.n_particles <= 0)
+        throw std::runtime_error("n_particles must be positive, got: " + std::to_string(cfg.n_particles));
+    if (cfg.dt <= 0.f)
+        throw std::runtime_error("dt must be positive");
+    if (cfg.disk_r_min >= cfg.disk_r_max)
+        throw std::runtime_error("disk_r_min must be less than disk_r_max");
+
     return cfg;
 }

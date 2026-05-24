@@ -13,4 +13,13 @@ TEST_CASE("loadConfig reads simulation.json correctly", "[config]") {
     REQUIRE_THAT(cfg.dt, Catch::Matchers::WithinRel(0.01f, 0.001f));
     REQUIRE(cfg.output_every_n_steps == 200);
     REQUIRE(cfg.output_dir == "data");
+    REQUIRE_THAT(cfg.disk_h_factor, Catch::Matchers::WithinRel(0.05f, 0.001f));
+    REQUIRE_THAT(cfg.softening_AU, Catch::Matchers::WithinRel(0.01f, 0.001f));
+    REQUIRE_THAT(cfg.collision_radius_factor, Catch::Matchers::WithinRel(100.0f, 0.001f));
+    REQUIRE_THAT(cfg.restitution, Catch::Matchers::WithinRel(0.3f, 0.001f));
+    REQUIRE_THAT(cfg.total_time, Catch::Matchers::WithinRel(2000.0f, 0.001f));
+}
+
+TEST_CASE("loadConfig throws on missing file", "[config]") {
+    REQUIRE_THROWS_AS(loadConfig("nonexistent/path.json"), std::runtime_error);
 }

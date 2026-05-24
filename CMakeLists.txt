@@ -42,8 +42,8 @@ set(SIM_SOURCES
   src/io/OutputWriter.cpp
 )
 
-# Main executable
-add_executable(nbody-sim src/main.cpp ${SIM_SOURCES})
+# Main executable (main.cu so CUDA inline functions from ParticleData.h compile)
+add_executable(nbody-sim src/main.cu ${SIM_SOURCES})
 target_include_directories(nbody-sim PRIVATE include)
 target_link_libraries(nbody-sim PRIVATE nlohmann_json::nlohmann_json)
 set_target_properties(nbody-sim PROPERTIES

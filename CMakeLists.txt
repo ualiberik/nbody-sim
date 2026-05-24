@@ -44,7 +44,7 @@ set(SIM_SOURCES
 
 # Main executable
 add_executable(nbody-sim src/main.cpp ${SIM_SOURCES})
-target_include_directories(nbody-sim PRIVATE include)
+target_include_directories(nbody-sim PRIVATE include src/disk)
 target_link_libraries(nbody-sim PRIVATE nlohmann_json::nlohmann_json)
 set_target_properties(nbody-sim PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
@@ -62,7 +62,7 @@ set(TEST_SOURCES
   tests/test_aggregate.cpp
 )
 add_executable(nbody-tests ${TEST_SOURCES} ${SIM_SOURCES})
-target_include_directories(nbody-tests PRIVATE include)
+target_include_directories(nbody-tests PRIVATE include src/disk)
 target_link_libraries(nbody-tests PRIVATE Catch2::Catch2WithMain nlohmann_json::nlohmann_json)
 set_target_properties(nbody-tests PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON

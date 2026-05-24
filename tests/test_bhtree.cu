@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "BHTree.cuh"
 #include "ParticleData.h"
+#include "Integrator.cuh"
 #include <cmath>
 #include <vector>
 
@@ -94,4 +96,39 @@ TEST_CASE("BH octree builds without crash for 1000 random particles", "[bhtree]"
     freeParticlesCPU(cpu);
     freeParticlesGPU(gpu);
     freeOctree(tree);
+}
+
+// ---------------------------------------------------------------------------
+// Task 10: Force accuracy test
+// ---------------------------------------------------------------------------
+TEST_CASE("BH force on single particle matches direct 1/r^2 from star", "[bhtree]") {
+    // Single particle at (1,0,0). Star at origin, M=1, G=1.
+    // Expected force: ax = -1.0 AU/T0^2 (within 5% of theta=0.5 error)
+    int n = 1;
+    ParticleData cpu = allocateParticlesCPU(n);
+    cpu.x[0]=1.f; cpu.y[0]=0.f; cpu.z[0]=0.f;
+    cpu.vx[0]=0.f; cpu.vy[0]=0.f; cpu.vz[0]=0.f;
+    cpu.ax[0]=0.f; cpu.ay[0]=0.f; cpu.az[0]=0.f;
+    cpu.mass[0]=1e-6f; cpu.id[0]=0;
+
+    ParticleData gpu = allocateParticlesGPU(n);
+    copyToGPU(cpu, gpu);
+
+    OctreeData tree = allocateOctree(n);
+    resetOctree(tree);
+    launchBBoxKernel(tree, gpu);
+    launchBuildKernel(tree, gpu);
+    launchSummarizeKernel(tree);
+    launchSortKernel(tree);
+    launchResetAccelerationKernel(gpu);
+    launchForceKernel(tree, gpu, 0.5f, 0.001f, 1.0f);
+
+    copyToCPU(gpu, cpu);
+
+    // Force from star at origin: ax = -G*M/r^2 = -1.0 (G=1, M=1, r=1, softening≈0)
+    REQUIRE_THAT(cpu.ax[0], Catch::Matchers::WithinRel(-1.0f, 0.05f));
+    REQUIRE_THAT(cpu.ay[0], Catch::Matchers::WithinAbs(0.0f, 0.05f));
+    REQUIRE_THAT(cpu.az[0], Catch::Matchers::WithinAbs(0.0f, 0.05f));
+
+    freeParticlesCPU(cpu); freeParticlesGPU(gpu); freeOctree(tree);
 }

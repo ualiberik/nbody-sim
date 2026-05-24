@@ -514,16 +514,184 @@ void launchSortKernel(OctreeData& t) {
 }
 
 // ---------------------------------------------------------------------------
-// Task 10 stubs — force and collision kernels to be implemented later
+// Task 10: Force kernel — iterative Barnes-Hut traversal with per-thread stack
 // ---------------------------------------------------------------------------
+__global__ void bhtree_forceKernel(
+    const float* tree_x, const float* tree_y, const float* tree_z,
+    const float* tree_mass, const float* cell_size,
+    const int* child, const int* sort_idx,
+    float* ax, float* ay, float* az,
+    const float* px, const float* py, const float* pz,
+    float theta, float softening, float star_mass,
+    int n_bodies, int n_total)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= n_bodies) return;
+    int body = sort_idx[idx];  // use DFS-sorted order for cache locality
+
+    float bx = px[body], by = py[body], bz = pz[body];
+    float fx = 0.f, fy = 0.f, fz = 0.f;
+
+    // Force from fixed star at origin
+    {
+        float dx = -bx, dy = -by, dz = -bz;
+        float r2 = dx*dx + dy*dy + dz*dz + softening*softening;
+        float r  = sqrtf(r2);
+        float f  = star_mass / (r2 * r);
+        fx += f*dx; fy += f*dy; fz += f*dz;
+    }
+
+    // BH tree traversal
+    int stack[64];
+    int top = 0;
+    stack[top++] = n_total - 1;  // root
+
+    while (top > 0) {
+        int node = stack[--top];
+        if (node < 0) continue;
+
+        float dx = tree_x[node] - bx;
+        float dy = tree_y[node] - by;
+        float dz = tree_z[node] - bz;
+        float r2 = dx*dx + dy*dy + dz*dz + softening*softening;
+        float r  = sqrtf(r2);
+
+        bool is_leaf = (node < n_bodies);
+        bool accept  = is_leaf || (cell_size[node] / r < theta);
+
+        if (accept) {
+            if (node == body) continue;  // skip self
+            float m  = tree_mass[node];
+            float f  = m / (r2 * r);
+            fx += f*dx; fy += f*dy; fz += f*dz;
+        } else {
+            // Push children onto stack
+            for (int k = 0; k < 8; ++k) {
+                int c = child[node*8+k];
+                if (c >= 0) {
+                    if (top < 63) stack[top++] = c;
+                }
+            }
+        }
+    }
+
+    ax[body] = fx;
+    ay[body] = fy;
+    az[body] = fz;
+}
+
 void launchForceKernel(OctreeData& t, ParticleData& p,
                         float theta, float softening, float star_mass) {
-    // Implemented in Task 10
-    (void)t; (void)p; (void)theta; (void)softening; (void)star_mass;
+    int bs = 256, nb = (p.n + bs - 1) / bs;
+    bhtree_forceKernel<<<nb, bs>>>(
+        t.pos_x, t.pos_y, t.pos_z, t.mass, t.cell_size, t.child, t.sort_idx,
+        p.ax, p.ay, p.az, p.x, p.y, p.z,
+        theta, softening, star_mass, t.n_bodies, t.n_total);
+    nbody_check_cuda(cudaGetLastError(),      "bhtree_forceKernel launch");
+    nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_forceKernel sync");
+}
+
+// ---------------------------------------------------------------------------
+// Task 10: Collision kernel — tree-assisted near-body search + inelastic impulse
+//
+// Two-pass design to avoid race conditions:
+//   Pass 1: each thread reads original velocities (vx_in) and accumulates
+//           velocity deltas into dvx via atomicAdd.
+//   Pass 2: a separate kernel adds dvx -> vx.
+// This ensures all threads see the same pre-collision velocities.
+// ---------------------------------------------------------------------------
+__global__ void bhtree_collisionKernel(
+    const float* tree_x, const float* tree_y, const float* tree_z,
+    const float* cell_size, const int* child, const int* sort_idx,
+    const float* vx_in, const float* vy_in, const float* vz_in,
+    float* dvx, float* dvy, float* dvz,
+    const float* px, const float* py, const float* pz,
+    float r_coll, float e, int n_bodies, int n_total)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= n_bodies) return;
+    int i = sort_idx[idx];
+
+    float ix=px[i], iy=py[i], iz=pz[i];
+    float vi_x=vx_in[i], vi_y=vy_in[i], vi_z=vz_in[i];
+
+    int stack[64]; int top = 0;
+    stack[top++] = n_total - 1;
+
+    while (top > 0) {
+        int node = stack[--top];
+        if (node < 0) continue;
+
+        float dx = tree_x[node]-ix, dy = tree_y[node]-iy, dz = tree_z[node]-iz;
+        float dist2 = dx*dx + dy*dy + dz*dz;
+
+        bool is_leaf = (node < n_bodies);
+
+        if (is_leaf) {
+            int j = node;
+            if (j == i) continue;
+            if (dist2 < r_coll * r_coll) {
+                float dist = sqrtf(dist2) + 1e-10f;
+                float nx = dx/dist, ny = dy/dist, nz = dz/dist;
+                // Relative velocity along normal (j relative to i), using original velocities
+                float dvn = (vx_in[j]-vi_x)*nx + (vy_in[j]-vi_y)*ny + (vz_in[j]-vi_z)*nz;
+                if (dvn < 0.f) {
+                    float J = -(1.f + e) * dvn * 0.5f;  // impulse per unit mass
+                    atomicAdd(&dvx[i], -J*nx);
+                    atomicAdd(&dvy[i], -J*ny);
+                    atomicAdd(&dvz[i], -J*nz);
+                }
+            }
+        } else {
+            float cell_half = cell_size[node];
+            float cell_dist = sqrtf(dist2) - cell_half * 1.732f;  // sqrt(3)*half = max extent
+            if (cell_dist < r_coll) {
+                for (int k = 0; k < 8; ++k) {
+                    int c = child[node*8+k];
+                    if (c >= 0 && top < 63) stack[top++] = c;
+                }
+            }
+        }
+    }
+}
+
+// Apply accumulated velocity deltas
+__global__ void bhtree_applyCollisionDeltaKernel(
+    float* vx, float* vy, float* vz,
+    const float* dvx, const float* dvy, const float* dvz,
+    int n_bodies)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= n_bodies) return;
+    vx[i] += dvx[i];
+    vy[i] += dvy[i];
+    vz[i] += dvz[i];
 }
 
 void launchCollisionKernel(OctreeData& t, ParticleData& p,
                             float r_coll, float restitution) {
-    // Implemented in Task 10
-    (void)t; (void)p; (void)r_coll; (void)restitution;
+    int n = p.n;
+    int bs = 256, nb = (n + bs - 1) / bs;
+
+    // Allocate temporary delta arrays, initialized to zero
+    float *dvx, *dvy, *dvz;
+    nbody_check_cuda(cudaMalloc(&dvx, n * sizeof(float)), "collisionKernel dvx alloc");
+    nbody_check_cuda(cudaMalloc(&dvy, n * sizeof(float)), "collisionKernel dvy alloc");
+    nbody_check_cuda(cudaMalloc(&dvz, n * sizeof(float)), "collisionKernel dvz alloc");
+    nbody_check_cuda(cudaMemset(dvx, 0, n * sizeof(float)), "collisionKernel dvx zero");
+    nbody_check_cuda(cudaMemset(dvy, 0, n * sizeof(float)), "collisionKernel dvy zero");
+    nbody_check_cuda(cudaMemset(dvz, 0, n * sizeof(float)), "collisionKernel dvz zero");
+
+    bhtree_collisionKernel<<<nb, bs>>>(
+        t.pos_x, t.pos_y, t.pos_z, t.cell_size, t.child, t.sort_idx,
+        p.vx, p.vy, p.vz, dvx, dvy, dvz, p.x, p.y, p.z,
+        r_coll, restitution, t.n_bodies, t.n_total);
+    nbody_check_cuda(cudaGetLastError(),      "bhtree_collisionKernel launch");
+    nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_collisionKernel sync");
+
+    bhtree_applyCollisionDeltaKernel<<<nb, bs>>>(p.vx, p.vy, p.vz, dvx, dvy, dvz, n);
+    nbody_check_cuda(cudaGetLastError(),      "bhtree_applyCollisionDeltaKernel launch");
+    nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_applyCollisionDeltaKernel sync");
+
+    cudaFree(dvx); cudaFree(dvy); cudaFree(dvz);
 }

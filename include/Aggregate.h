@@ -11,8 +11,8 @@ struct Aggregate {
     std::vector<int> particle_ids;
 };
 
-// Forward declarations — implementation added in Task 6 (src/analysis/Aggregate.cpp)
-struct ParticleData;
-struct Config;
+// Implementation in src/analysis/Aggregate.cpp
+#include "ParticleData.h"
+#include "Config.h"
 std::vector<Aggregate> detectAggregates(
     const ParticleData& p, float link_length, const Config& cfg);

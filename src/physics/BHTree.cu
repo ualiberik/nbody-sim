@@ -374,6 +374,9 @@ OctreeData allocateOctree(int n) {
     nbody_check_cuda(cudaMalloc(&t.bbox_min,  3  * sizeof(float)),   "allocOctree bbox_min");
     nbody_check_cuda(cudaMalloc(&t.bbox_max,  3  * sizeof(float)),   "allocOctree bbox_max");
     nbody_check_cuda(cudaMalloc(&t.next_node, sizeof(int)),          "allocOctree next_node");
+    nbody_check_cuda(cudaMalloc(&t.dv_x,     n  * sizeof(float)),   "allocOctree dv_x");
+    nbody_check_cuda(cudaMalloc(&t.dv_y,     n  * sizeof(float)),   "allocOctree dv_y");
+    nbody_check_cuda(cudaMalloc(&t.dv_z,     n  * sizeof(float)),   "allocOctree dv_z");
     return t;
 }
 
@@ -383,9 +386,11 @@ void freeOctree(OctreeData& t) {
     cudaFree(t.start);  cudaFree(t.sort_idx); cudaFree(t.mutex);
     cudaFree(t.cell_size); cudaFree(t.bbox_min); cudaFree(t.bbox_max);
     cudaFree(t.next_node);
+    cudaFree(t.dv_x);   cudaFree(t.dv_y);   cudaFree(t.dv_z);
     t.pos_x = t.pos_y = t.pos_z = nullptr;
     t.mass  = t.cell_size = t.bbox_min = t.bbox_max = nullptr;
     t.child = t.count = t.start = t.sort_idx = t.mutex = t.next_node = nullptr;
+    t.dv_x  = t.dv_y  = t.dv_z  = nullptr;
     t.n_bodies = t.n_total = 0;
 }
 
@@ -406,6 +411,12 @@ void resetOctree(OctreeData& tree) {
     nbody_check_cuda(cudaMemcpy(tree.next_node, &tree.n_bodies,
                                 sizeof(int), cudaMemcpyHostToDevice),
                      "resetOctree next_node init");
+
+    // Zero velocity-delta arrays used by two-pass collision kernel
+    int n_b = tree.n_bodies;
+    nbody_check_cuda(cudaMemset(tree.dv_x, 0, n_b * sizeof(float)), "resetOctree dv_x");
+    nbody_check_cuda(cudaMemset(tree.dv_y, 0, n_b * sizeof(float)), "resetOctree dv_y");
+    nbody_check_cuda(cudaMemset(tree.dv_z, 0, n_b * sizeof(float)), "resetOctree dv_z");
 }
 
 void launchBBoxKernel(OctreeData& t, const ParticleData& p) {
@@ -542,7 +553,7 @@ __global__ void bhtree_forceKernel(
     }
 
     // BH tree traversal
-    int stack[64];
+    int stack[256];
     int top = 0;
     stack[top++] = n_total - 1;  // root
 
@@ -553,11 +564,17 @@ __global__ void bhtree_forceKernel(
         float dx = tree_x[node] - bx;
         float dy = tree_y[node] - by;
         float dz = tree_z[node] - bz;
-        float r2 = dx*dx + dy*dy + dz*dz + softening*softening;
+        // Geometric distance (no softening) for the Barnes-Hut opening criterion.
+        // Softening must not inflate r used for the s/r < theta test — it would
+        // cause spurious node opening / acceptance at large separations.
+        float r_geom2 = dx*dx + dy*dy + dz*dz;
+        float r_geom  = sqrtf(r_geom2);
+        // Softened distance for the gravitational force magnitude only.
+        float r2 = r_geom2 + softening*softening;
         float r  = sqrtf(r2);
 
         bool is_leaf = (node < n_bodies);
-        bool accept  = is_leaf || (cell_size[node] / r < theta);
+        bool accept  = is_leaf || (cell_size[node] / r_geom < theta);
 
         if (accept) {
             if (node == body) continue;  // skip self
@@ -569,7 +586,7 @@ __global__ void bhtree_forceKernel(
             for (int k = 0; k < 8; ++k) {
                 int c = child[node*8+k];
                 if (c >= 0) {
-                    if (top < 63) stack[top++] = c;
+                    if (top < 255) stack[top++] = c;
                 }
             }
         }
@@ -615,7 +632,7 @@ __global__ void bhtree_collisionKernel(
     float ix=px[i], iy=py[i], iz=pz[i];
     float vi_x=vx_in[i], vi_y=vy_in[i], vi_z=vz_in[i];
 
-    int stack[64]; int top = 0;
+    int stack[256]; int top = 0;
     stack[top++] = n_total - 1;
 
     while (top > 0) {
@@ -648,7 +665,7 @@ __global__ void bhtree_collisionKernel(
             if (cell_dist < r_coll) {
                 for (int k = 0; k < 8; ++k) {
                     int c = child[node*8+k];
-                    if (c >= 0 && top < 63) stack[top++] = c;
+                    if (c >= 0 && top < 255) stack[top++] = c;
                 }
             }
         }
@@ -673,25 +690,19 @@ void launchCollisionKernel(OctreeData& t, ParticleData& p,
     int n = p.n;
     int bs = 256, nb = (n + bs - 1) / bs;
 
-    // Allocate temporary delta arrays, initialized to zero
-    float *dvx, *dvy, *dvz;
-    nbody_check_cuda(cudaMalloc(&dvx, n * sizeof(float)), "collisionKernel dvx alloc");
-    nbody_check_cuda(cudaMalloc(&dvy, n * sizeof(float)), "collisionKernel dvy alloc");
-    nbody_check_cuda(cudaMalloc(&dvz, n * sizeof(float)), "collisionKernel dvz alloc");
-    nbody_check_cuda(cudaMemset(dvx, 0, n * sizeof(float)), "collisionKernel dvx zero");
-    nbody_check_cuda(cudaMemset(dvy, 0, n * sizeof(float)), "collisionKernel dvy zero");
-    nbody_check_cuda(cudaMemset(dvz, 0, n * sizeof(float)), "collisionKernel dvz zero");
+    // Zero pre-allocated delta arrays (allocated once in allocateOctree)
+    nbody_check_cuda(cudaMemset(t.dv_x, 0, n * sizeof(float)), "collisionKernel dv_x zero");
+    nbody_check_cuda(cudaMemset(t.dv_y, 0, n * sizeof(float)), "collisionKernel dv_y zero");
+    nbody_check_cuda(cudaMemset(t.dv_z, 0, n * sizeof(float)), "collisionKernel dv_z zero");
 
     bhtree_collisionKernel<<<nb, bs>>>(
         t.pos_x, t.pos_y, t.pos_z, t.cell_size, t.child, t.sort_idx,
-        p.vx, p.vy, p.vz, dvx, dvy, dvz, p.x, p.y, p.z,
+        p.vx, p.vy, p.vz, t.dv_x, t.dv_y, t.dv_z, p.x, p.y, p.z,
         r_coll, restitution, t.n_bodies, t.n_total);
     nbody_check_cuda(cudaGetLastError(),      "bhtree_collisionKernel launch");
     nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_collisionKernel sync");
 
-    bhtree_applyCollisionDeltaKernel<<<nb, bs>>>(p.vx, p.vy, p.vz, dvx, dvy, dvz, n);
+    bhtree_applyCollisionDeltaKernel<<<nb, bs>>>(p.vx, p.vy, p.vz, t.dv_x, t.dv_y, t.dv_z, n);
     nbody_check_cuda(cudaGetLastError(),      "bhtree_applyCollisionDeltaKernel launch");
     nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_applyCollisionDeltaKernel sync");
-
-    cudaFree(dvx); cudaFree(dvy); cudaFree(dvz);
 }

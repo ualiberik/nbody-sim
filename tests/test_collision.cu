@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "BHTree.cuh"
 #include "ParticleData.h"
 #include <cmath>
@@ -38,6 +39,10 @@ TEST_CASE("Collision kernel reverses approach velocity with restitution", "[coll
     // After inelastic bounce: both particles should reverse x-velocity direction
     REQUIRE(cpu.vx[0] < 0.0f);  // was +0.1, should go negative after being hit
     REQUIRE(cpu.vx[1] > 0.0f);  // was -0.1, should go positive
+
+    // Momentum must be exactly conserved (equal masses, two-pass design
+    // applies symmetric impulses from each thread's perspective).
+    REQUIRE_THAT(cpu.vx[0] + cpu.vx[1], Catch::Matchers::WithinAbs(0.0f, 1e-5f));
 
     freeParticlesCPU(cpu); freeParticlesGPU(gpu); freeOctree(tree);
 }

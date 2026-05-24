@@ -27,6 +27,10 @@ struct OctreeData {
 
     int*   next_node;  // atomic counter for internal node allocation, init = n_bodies
 
+    float* dv_x;      // per-body velocity delta for two-pass collision [n_bodies]
+    float* dv_y;
+    float* dv_z;
+
     int n_bodies;
     int n_total;       // n_bodies + MAX_NODES_MULT * n_bodies
 };

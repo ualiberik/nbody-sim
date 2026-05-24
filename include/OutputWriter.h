@@ -7,8 +7,7 @@
 #include "Aggregate.h"
 
 // Unit conversion (G=1, natural units)
-// 1 orbital period at 1 AU = 2pi T0 ~= 365.25 days
-// T0 ~= 58.1 days ~= 1/(2pi) years
+// 1 orbital period at 1 AU = 2*pi*T0 ~= 1 year. T0 ~= 1/(2*pi) years ~= 58.1 days.
 constexpr float T0_TO_YEARS    = 1.0f / (2.0f * 3.14159265f);  // ~= 0.1592 yr/T0
 constexpr float MSUN_TO_MEARTH = 332946.0f;
 

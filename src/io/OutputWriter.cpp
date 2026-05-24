@@ -33,11 +33,11 @@ OutputWriter::OutputWriter(const std::string& output_dir, const Config& cfg)
 }
 
 // ---------------------------------------------------------------------------
-// Destructor — flush both files
+// Destructor — close both files (implicitly flushes)
 // ---------------------------------------------------------------------------
 OutputWriter::~OutputWriter() {
-    if (frames_file_.is_open()) frames_file_.flush();
-    if (stats_file_.is_open())  stats_file_.flush();
+    if (frames_file_.is_open()) frames_file_.close();
+    if (stats_file_.is_open())  stats_file_.close();
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +97,11 @@ void OutputWriter::writeFrame(const ParticleData& cpu_particles, float sim_time_
 }
 
 // ---------------------------------------------------------------------------
-// writeStats — one CSV row per aggregate
+// writeStats — one CSV row per aggregate.
+// If aggregates is empty, no row is written for this frame (early simulation
+// frames before any particles cluster will produce zero rows).
+// Note: finalize() must be called before process exit to guarantee all
+// buffered CSV rows are flushed to disk.
 // ---------------------------------------------------------------------------
 void OutputWriter::writeStats(const std::vector<Aggregate>& aggregates,
                                int frame_idx, float sim_time_T0)

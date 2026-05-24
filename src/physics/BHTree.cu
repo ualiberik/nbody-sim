@@ -191,15 +191,8 @@ __global__ void bhtree_buildKernel(
                       bmax[2] - bmin[2]) * 0.5f * 1.001f;
 
     int root = n_total - 1;
-
-    // Thread 0 initialises root center/half-size
-    if (body == 0) {
-        pos_x[root]     = rcx;
-        pos_y[root]     = rcy;
-        pos_z[root]     = rcz;
-        cell_size[root] = rhs;
-    }
-    __threadfence();  // ensure root data visible to all threads
+    // Root geometry is initialized by launchBuildKernel (CPU-side) before
+    // this kernel is launched, so no cross-block race here.
 
     // Insertion loop
     int node = root;
@@ -463,6 +456,28 @@ void launchBuildKernel(OctreeData& t, const ParticleData& p) {
     bhtree_setLeafCountKernel<<<nb, bs>>>(t.count, n);
     nbody_check_cuda(cudaGetLastError(),      "bhtree_setLeafCountKernel launch");
     nbody_check_cuda(cudaDeviceSynchronize(), "bhtree_setLeafCountKernel sync");
+
+    // Initialize root geometry CPU-side before the build kernel launches.
+    // __threadfence() only orders memory within a single kernel launch — it
+    // cannot synchronize across blocks. Doing this here (on the host, after
+    // cudaDeviceSynchronize) guarantees all threads see consistent root data.
+    {
+        float bmin[3], bmax[3];
+        nbody_check_cuda(cudaMemcpy(bmin, t.bbox_min, 3*sizeof(float), cudaMemcpyDeviceToHost),
+                         "launchBuildKernel download bbox_min");
+        nbody_check_cuda(cudaMemcpy(bmax, t.bbox_max, 3*sizeof(float), cudaMemcpyDeviceToHost),
+                         "launchBuildKernel download bbox_max");
+        float rcx = (bmin[0]+bmax[0]) * 0.5f;
+        float rcy = (bmin[1]+bmax[1]) * 0.5f;
+        float rcz = (bmin[2]+bmax[2]) * 0.5f;
+        float rhs = fmaxf(fmaxf(bmax[0]-bmin[0], bmax[1]-bmin[1]),
+                               bmax[2]-bmin[2]) * 0.5f * 1.001f;
+        int root = t.n_total - 1;
+        nbody_check_cuda(cudaMemcpy(t.pos_x     + root, &rcx, sizeof(float), cudaMemcpyHostToDevice), "root pos_x");
+        nbody_check_cuda(cudaMemcpy(t.pos_y     + root, &rcy, sizeof(float), cudaMemcpyHostToDevice), "root pos_y");
+        nbody_check_cuda(cudaMemcpy(t.pos_z     + root, &rcz, sizeof(float), cudaMemcpyHostToDevice), "root pos_z");
+        nbody_check_cuda(cudaMemcpy(t.cell_size + root, &rhs, sizeof(float), cudaMemcpyHostToDevice), "root cell_size");
+    }
 
     // Build the tree
     bhtree_buildKernel<<<nb, bs>>>(

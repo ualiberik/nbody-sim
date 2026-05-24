@@ -19,7 +19,7 @@ struct OctreeData {
     int*   count;      // bodies in subtree
     int*   start;      // DFS start index for sort
     int*   sort_idx;   // sorted body order [n_bodies]
-    int*   mutex;      // per-node spin lock (0=free)
+    int*   mutex;      // per-node spin lock (reserved; build uses CAS-slot, not mutex)
     float* cell_size;  // half side-length of bounding cube for node
 
     float* bbox_min;   // [3]: global min x,y,z

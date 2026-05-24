@@ -71,4 +71,4 @@ set_target_properties(nbody-tests PROPERTIES
 
 include(CTest)
 include(Catch)
-catch_discover_tests(nbody-tests)
+catch_discover_tests(nbody-tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

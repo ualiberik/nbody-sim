@@ -2,22 +2,33 @@ cmake_minimum_required(VERSION 3.20)
 project(nbody-sim LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
+
+# CUDA version guard
+if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS "12.0")
+  message(FATAL_ERROR "CUDA 12.0 or later is required. Found: ${CMAKE_CUDA_COMPILER_VERSION}")
+endif()
 
 # Fetch dependencies
 include(FetchContent)
 
 FetchContent_Declare(nlohmann_json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3
+  GIT_TAG        v3.11.3
+  GIT_SHALLOW    TRUE
 )
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 FetchContent_MakeAvailable(nlohmann_json)
 
 FetchContent_Declare(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.8.1
+  GIT_TAG        v3.8.1
+  GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(Catch2)
 

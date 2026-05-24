@@ -4,3 +4,6 @@ CLAUDE.md
 
 # Git worktrees
 .worktrees/
+
+# Build artifacts
+build/

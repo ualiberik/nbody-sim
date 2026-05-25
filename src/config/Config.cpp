@@ -25,10 +25,24 @@ Config loadConfig(const std::string& path) {
     cfg.theta                  = j.value("theta", cfg.theta);
     cfg.collision_radius_factor= j.value("collision_radius_factor", cfg.collision_radius_factor);
     cfg.restitution            = j.value("restitution", cfg.restitution);
+    cfg.gas_drag_rate          = j.value("gas_drag_rate", cfg.gas_drag_rate);
     cfg.dt                     = j.value("dt", cfg.dt);
     cfg.total_time             = j.value("total_time", cfg.total_time);
     cfg.output_every_n_steps   = j.value("output_every_n_steps", cfg.output_every_n_steps);
     cfg.output_dir             = j.value("output_dir", cfg.output_dir);
+
+    // Perturber (optional)
+    cfg.perturber_enabled      = j.value("perturber_enabled",   cfg.perturber_enabled);
+    cfg.perturber_mass_mjup    = j.value("perturber_mass_mjup", cfg.perturber_mass_mjup);
+    cfg.perturber_radius_AU    = j.value("perturber_radius_AU", cfg.perturber_radius_AU);
+    cfg.perturber_phase0       = j.value("perturber_phase0",    cfg.perturber_phase0);
+
+    if (cfg.perturber_enabled) {
+        if (cfg.perturber_mass_mjup <= 0.0f)
+            throw std::runtime_error("perturber_mass_mjup must be positive");
+        if (cfg.perturber_radius_AU <= 0.0f)
+            throw std::runtime_error("perturber_radius_AU must be positive");
+    }
 
     if (cfg.n_particles <= 0)
         throw std::runtime_error("n_particles must be positive, got: " + std::to_string(cfg.n_particles));

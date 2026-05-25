@@ -1,0 +1,21 @@
+{
+  "n_particles": 10000,
+  "disk_r_min": 0.5,
+  "disk_r_max": 5.0,
+  "disk_h_factor": 0.01,
+  "particle_mass_msun": 3.003e-6,
+  "star_mass_msun": 1.0,
+  "softening_AU": 0.01,
+  "theta": 0.5,
+  "collision_radius_factor": 500.0,
+  "restitution": 0.05,
+  "gas_drag_rate": 0.01,
+  "dt": 0.01,
+  "total_time": 5000.0,
+  "output_every_n_steps": 10,
+  "output_dir": "data",
+  "perturber_enabled": true,
+  "perturber_mass_mjup": 3.0,
+  "perturber_radius_AU": 20.0,
+  "perturber_phase0": 0.0
+}

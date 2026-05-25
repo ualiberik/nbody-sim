@@ -41,9 +41,13 @@ OutputWriter::~OutputWriter() {
 }
 
 // ---------------------------------------------------------------------------
-// Binary header
+// Binary header (32 bytes)
 //   Bytes  0-3 : magic "NBOD"
-//   Bytes  4-7 : version = 1 (uint32_t)
+//   Bytes  4-7 : version = 2 (uint32_t)
+//                  v1: per-frame layout = time(8) + x[n](4n) + y[n](4n) + z[n](4n)
+//                  v2: per-frame layout = time(8) + x/y/z(12n) + agg_size[n](2n)
+//                       agg_size is uint16_t: size of aggregate containing
+//                       particle i (1 if singleton).
 //   Bytes  8-11: n_particles (uint32_t)
 //   Bytes 12-15: n_frames = 0 placeholder (uint32_t) — patched by finalize()
 //   Bytes 16-23: dt (double)
@@ -54,7 +58,7 @@ void OutputWriter::writeFramesHeader() {
     frames_file_.write("NBOD", 4);
 
     // Version
-    uint32_t version = 1u;
+    uint32_t version = 2u;
     writeRaw(frames_file_, version);
 
     // n_particles
@@ -84,16 +88,30 @@ void OutputWriter::writeStatsHeader() {
 }
 
 // ---------------------------------------------------------------------------
-// writeFrame — one frame: sim_time (double) + x/y/z arrays (float32 each)
+// writeFrame — one frame (format v2):
+//   time_T0        double
+//   x[n], y[n], z[n]   float32 SoA
+//   agg_size[n]    uint16_t (particle's aggregate size, 1 = singleton)
 // ---------------------------------------------------------------------------
-void OutputWriter::writeFrame(const ParticleData& cpu_particles, float sim_time_T0) {
+void OutputWriter::writeFrame(const ParticleData& cpu_particles, float sim_time_T0,
+                               const std::vector<uint16_t>& agg_sizes_per_particle)
+{
+    int n = cpu_particles.n;
+    if (static_cast<int>(agg_sizes_per_particle.size()) != n)
+        throw std::runtime_error(
+            "OutputWriter::writeFrame: agg_sizes_per_particle size mismatch");
+
     double t = static_cast<double>(sim_time_T0);
     writeRaw(frames_file_, t);
 
-    int n = cpu_particles.n;
     frames_file_.write(reinterpret_cast<const char*>(cpu_particles.x), n * sizeof(float));
     frames_file_.write(reinterpret_cast<const char*>(cpu_particles.y), n * sizeof(float));
     frames_file_.write(reinterpret_cast<const char*>(cpu_particles.z), n * sizeof(float));
+
+    // Aggregate sizes as uint16 (saves 50% over float32; max value 65535
+    // far exceeds any realistic aggregate count).
+    frames_file_.write(reinterpret_cast<const char*>(agg_sizes_per_particle.data()),
+                       n * sizeof(uint16_t));
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +145,44 @@ void OutputWriter::writeStats(const std::vector<Aggregate>& aggregates,
             << agg.vz                                 << ','
             << agg.dist_center                        << '\n';
     }
+}
+
+// ---------------------------------------------------------------------------
+// writePerturberStats — record the fixed outer perturber as a special row.
+//
+// Schema is the same as the per-aggregate row but:
+//   agg_id      = -1   (sentinel for analysis filters)
+//   n_particles =  0
+//   mass_*      = perturber mass
+//   cx/cy/cz    = perturber XYZ position
+//   vx/vy/vz    = analytic Keplerian velocity (perpendicular to r in XZ plane)
+//   dist_center = perturber orbital radius
+// ---------------------------------------------------------------------------
+void OutputWriter::writePerturberStats(int frame_idx, float sim_time_T0,
+                                        int n_aggregates,
+                                        float px, float py, float pz,
+                                        float mass_msun, float omega)
+{
+    float sim_years = sim_time_T0 * T0_TO_YEARS;
+    float r         = std::sqrt(px*px + pz*pz);
+    // Tangent in XZ plane: phi-hat = (-z, 0, x)/r, velocity magnitude = omega*r
+    float v_mag = omega * r;
+    float vx = (r > 0.f) ? (-pz / r) * v_mag : 0.f;
+    float vz = (r > 0.f) ? ( px / r) * v_mag : 0.f;
+    float vy = 0.f;
+
+    stats_file_
+        << frame_idx        << ','
+        << sim_time_T0      << ','
+        << sim_years        << ','
+        << n_aggregates     << ','
+        << -1               << ','   // agg_id sentinel
+        << 0                << ','   // n_particles
+        << mass_msun        << ','
+        << (mass_msun * MSUN_TO_MEARTH) << ','
+        << px << ',' << py << ',' << pz << ','
+        << vx << ',' << vy << ',' << vz << ','
+        << r << '\n';
 }
 
 // ---------------------------------------------------------------------------

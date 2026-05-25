@@ -26,10 +26,11 @@ TEST_CASE("OutputWriter writes valid frames.bin header", "[output]") {
     p.x[2]=3.f; p.y[2]=0.f; p.z[2]=0.f;
     p.x[3]=4.f; p.y[3]=0.f; p.z[3]=0.f;
 
+    std::vector<uint16_t> agg_sizes(4, 1);   // all singletons
     {
         OutputWriter writer(cfg.output_dir, cfg);
-        writer.writeFrame(p, 0.0f);
-        writer.writeFrame(p, 1.0f);
+        writer.writeFrame(p, 0.0f, agg_sizes);
+        writer.writeFrame(p, 1.0f, agg_sizes);
         writer.finalize(2);
     }
 
@@ -46,7 +47,7 @@ TEST_CASE("OutputWriter writes valid frames.bin header", "[output]") {
 
     uint32_t version = 0;
     f.read(reinterpret_cast<char*>(&version), 4);
-    REQUIRE(version == 1u);
+    REQUIRE(version == 2u);
 
     uint32_t n_particles = 0;
     f.read(reinterpret_cast<char*>(&n_particles), 4);
@@ -108,8 +109,9 @@ TEST_CASE("OutputWriter writes correct stats.csv header and rows", "[output]") {
     std::vector<Aggregate> aggs = {a0, a1};
 
     {
+        std::vector<uint16_t> agg_sizes(2, 1);
         OutputWriter writer(cfg.output_dir, cfg);
-        writer.writeFrame(p, 0.0f);
+        writer.writeFrame(p, 0.0f, agg_sizes);
         writer.writeStats(aggs, 0, 0.0f);
         writer.finalize(1);
     }

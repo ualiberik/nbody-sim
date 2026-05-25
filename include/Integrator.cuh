@@ -13,3 +13,10 @@ void launchDriftKernel(ParticleData& gpu, float dt);
 
 // Reset: ax = ay = az = 0
 void launchResetAccelerationKernel(ParticleData& gpu);
+
+// Gas-drag damping: damps the deviation of each particle's velocity from
+// the local circular Keplerian orbit (XZ-plane around the star) and damps
+// vertical (Y) motion. Orbital direction (prograde/retrograde) is preserved.
+// drag_rate is in units of 1/T0; the per-step decay factor is exp(-drag_rate * dt).
+void launchGasDragKernel(ParticleData& gpu, float drag_rate, float dt,
+                          float star_mass_msun);

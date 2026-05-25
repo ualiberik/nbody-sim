@@ -1,0 +1,151 @@
+[1/20] Building CXX object CMakeFiles\nbody-sim.dir\src\disk\DiskInit.cpp.obj
+[2/20] Building CXX object CMakeFiles\nbody-tests.dir\src\io\OutputWriter.cpp.obj
+[3/20] Building CXX object CMakeFiles\nbody-sim.dir\src\io\OutputWriter.cpp.obj
+[4/20] Building CXX object CMakeFiles\nbody-tests.dir\src\disk\DiskInit.cpp.obj
+[5/20] Building CXX object CMakeFiles\nbody-tests.dir\src\analysis\Aggregate.cpp.obj
+[6/20] Building CXX object CMakeFiles\nbody-tests.dir\tests\test_disk_init.cpp.obj
+[7/20] Building CXX object CMakeFiles\nbody-tests.dir\tests\test_aggregate.cpp.obj
+[8/20] Building CXX object CMakeFiles\nbody-sim.dir\src\analysis\Aggregate.cpp.obj
+[9/20] Building CXX object CMakeFiles\nbody-tests.dir\tests\test_config.cpp.obj
+[10/20] Building CXX object CMakeFiles\nbody-tests.dir\tests\test_output.cpp.obj
+[11/20] Building CXX object CMakeFiles\nbody-sim.dir\src\config\Config.cpp.obj
+[12/20] Building CXX object CMakeFiles\nbody-tests.dir\src\config\Config.cpp.obj
+[13/20] Building CUDA object CMakeFiles\nbody-tests.dir\src\physics\Perturber.cu.obj
+Perturber.cu
+
+tmpxft_00001ca8_00000000-7_Perturber.compute_89.cudafe1.cpp
+
+[14/20] Building CUDA object CMakeFiles\nbody-sim.dir\src\physics\Perturber.cu.obj
+Perturber.cu
+
+tmpxft_00006e4c_00000000-7_Perturber.compute_89.cudafe1.cpp
+
+[15/20] Building CUDA object CMakeFiles\nbody-tests.dir\tests\test_perturber.cu.obj
+C:\Projects\nbody-sim\.worktrees\feature-nbody-simulation\tests\test_perturber.cu(122): warning #177-D: variable "one" was declared but never referenced
+      float zero = 0.f, one = 1.0f, pre_ax = 0.5f;
+                        ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+C:\Projects\nbody-sim\.worktrees\feature-nbody-simulation\tests\test_perturber.cu(122): warning #177-D: variable "one" was declared but never referenced
+      float zero = 0.f, one = 1.0f, pre_ax = 0.5f;
+
+                        ^
+
+
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+
+
+test_perturber.cu
+
+tmpxft_00007cd4_00000000-7_test_perturber.compute_89.cudafe1.cpp
+
+[16/20] Linking CXX executable CMakeFiles\nbody-tests.dir\cmake_device_link.obj
+test_config.cpp.obj
+
+test_disk_init.cpp.obj
+
+test_output.cpp.obj
+
+test_integrator.cu.obj
+
+test_bhtree.cu.obj
+
+test_collision.cu.obj
+
+test_aggregate.cpp.obj
+
+test_perturber.cu.obj
+
+Config.cpp.obj
+
+DiskInit.cpp.obj
+
+BHTree.cu.obj
+
+Integrator.cu.obj
+
+Perturber.cu.obj
+
+Aggregate.cpp.obj
+
+OutputWriter.cpp.obj
+
+Catch2Main.lib
+
+Catch2.lib
+
+cudadevrt.lib
+
+cudart_static.lib
+
+kernel32.lib
+
+user32.lib
+
+gdi32.lib
+
+winspool.lib
+
+shell32.lib
+
+ole32.lib
+
+oleaut32.lib
+
+uuid.lib
+
+comdlg32.lib
+
+advapi32.lib
+
+[17/20] Linking CXX executable nbody-tests.exe
+[18/20] Building CUDA object CMakeFiles\nbody-sim.dir\src\main.cu.obj
+main.cu
+
+tmpxft_00008200_00000000-7_main.compute_89.cudafe1.cpp
+
+[19/20] Linking CXX executable CMakeFiles\nbody-sim.dir\cmake_device_link.obj
+main.cu.obj
+
+Config.cpp.obj
+
+DiskInit.cpp.obj
+
+BHTree.cu.obj
+
+Integrator.cu.obj
+
+Perturber.cu.obj
+
+Aggregate.cpp.obj
+
+OutputWriter.cpp.obj
+
+cudadevrt.lib
+
+cudart_static.lib
+
+kernel32.lib
+
+user32.lib
+
+gdi32.lib
+
+winspool.lib
+
+shell32.lib
+
+ole32.lib
+
+oleaut32.lib
+
+uuid.lib
+
+comdlg32.lib
+
+advapi32.lib
+
+[20/20] Linking CXX executable nbody-sim.exe

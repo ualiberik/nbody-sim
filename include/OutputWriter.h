@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <cstdint>
 #include "ParticleData.h"
 #include "Config.h"
 #include "Aggregate.h"
@@ -17,12 +18,24 @@ public:
     OutputWriter(const std::string& output_dir, const Config& cfg);
     ~OutputWriter();
 
-    // Write one frame of particle positions + timestamp to frames.bin
-    void writeFrame(const ParticleData& cpu_particles, float sim_time_T0);
+    // Write one frame of particle positions + timestamp to frames.bin.
+    // agg_sizes_per_particle: array of length n_particles; element i is the
+    //   size (particle count) of the aggregate containing particle i, or 1
+    //   if the particle is not in any aggregate. Used by the visualizer to
+    //   modulate brightness — bigger clumps glow brighter.
+    void writeFrame(const ParticleData& cpu_particles, float sim_time_T0,
+                    const std::vector<uint16_t>& agg_sizes_per_particle);
 
     // Write per-aggregate stats row(s) to stats.csv
     void writeStats(const std::vector<Aggregate>& aggregates,
                     int frame_idx, float sim_time_T0);
+
+    // Write a single perturber row to stats.csv. agg_id is hard-coded to -1
+    // and n_particles to 0 so downstream analysis can filter it out.
+    void writePerturberStats(int frame_idx, float sim_time_T0,
+                              int n_aggregates,
+                              float px, float py, float pz,
+                              float mass_msun, float omega);
 
     // Patch n_frames count in binary header (call once at end)
     void finalize(int total_frames_written);

@@ -38,6 +38,7 @@ set(SIM_SOURCES
   src/disk/DiskInit.cpp
   src/physics/BHTree.cu
   src/physics/Integrator.cu
+  src/physics/Perturber.cu
   src/analysis/Aggregate.cpp
   src/io/OutputWriter.cpp
 )
@@ -60,6 +61,7 @@ set(TEST_SOURCES
   tests/test_bhtree.cu
   tests/test_collision.cu
   tests/test_aggregate.cpp
+  tests/test_perturber.cu
 )
 add_executable(nbody-tests ${TEST_SOURCES} ${SIM_SOURCES})
 target_include_directories(nbody-tests PRIVATE include)

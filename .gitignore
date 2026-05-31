@@ -13,7 +13,6 @@ data/
 *.log
 
 # Local tooling / editor state
-.claude/
 .worktrees/
 
 # Unity generated

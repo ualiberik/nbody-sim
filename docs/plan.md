@@ -1,7 +1,5 @@
 # N-Body Simulation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Build a C++/CUDA N-body simulation of a 100,000-particle protoplanetary disk using Barnes-Hut gravity, outputting binary frame data for Unity and CSV statistics for analysis.
 
 **Architecture:** Particles orbit a fixed central mass in a 3D disk (MMSN density profile). A CUDA Barnes-Hut octree computes O(N log N) gravitational forces. Leapfrog (KDK) integration advances positions. A separate CUDA collision kernel reuses the built tree for inelastic bounce detection. CPU-side Friend-of-Friends groups nearby particles into aggregates for statistics output.

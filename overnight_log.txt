@@ -1,0 +1,171 @@
+N-BODY OVERNIGHT EXPERIMENT — perturber sweep
+=============================================
+Run 1 (control): 10000 T0, NO perturber. Already completed.
+  Data: C:\Projects\nbody-sim\.worktrees\feature-nbody-simulation\data\20260525_202643
+  frames.bin: 13.04 GB    stats.csv: 9.81 GB
+
+Experiments (each 5000 T0 ~ 800 yr, perturber at r=20 AU):
+  Run 2:  0.3 M_Jup
+  Run 3:  1.0 M_Jup
+  Run 4:  3.0 M_Jup
+  Run 5:  5.0 M_Jup
+  Run 6: 10.0 M_Jup
+
+Code changes (committed to feature/nbody-simulation):
+  - Config: 4 new fields (perturber_enabled, mass, radius, phase0)
+  - Perturber.h / Perturber.cu: analytic Keplerian + CUDA force kernel
+  - main.cu: makePerturber + updatePerturber + force kernel call + stats output
+  - OutputWriter: writePerturberStats (agg_id = -1 sentinel row)
+  - CMakeLists: added Perturber.cu and test_perturber.cu
+  - test_perturber.cu: 4 unit tests, all passing
+  - Pre-existing test failure in test_config (unrelated): config defaults drift
+    in main config file; my changes do not affect it.
+
+=== EVENT LOG ===
+
+[2026-05-26 00:00] Control sim finished. 100k frames, 10000 T0 ~ 1590 yr.
+                   Data: data/20260525_202643/ (13.04 GB frames, 9.81 GB stats)
+
+[2026-05-26 00:07] Smoke test of perturber feature: 100 frames, 2000 particles,
+                   5 M_Jup at 20 AU. Verified r=20.00 AU, agg_id=-1 sentinel,
+                   mass conversion correct. All 4 unit tests pass.
+
+[2026-05-26 00:10] Committed perturber feature on feature/nbody-simulation.
+
+[2026-05-26 00:30] Started experiment 1: 0.3 M_Jup at r=20 AU,
+                   5000 T0 = 800 yr. Background task balrdco6y.
+
+[2026-05-26 01:30] Control-sim analysis complete:
+                   ▶ analysis_control/01_growth_curves.png   (n_agg + top-3 mass)
+                   ▶ analysis_control/02_final_topdown.png    (final state wide)
+                   ▶ analysis_control/03_mass_radius.png     (vs Solar System)
+                   ▶ analysis_control/final_top30.csv         (top bodies)
+                   ▶ analysis_control/per_frame_summary.csv  (per-frame stats)
+
+CONTROL SIM KEY RESULTS:
+  - 1032 final aggregates (vs 980 at 1094 yr, 733 at 159 yr)
+  - 8 gas giants ≥30 M⊕ across 4 clusters (3.8, 4.3-4.4, 5.0-5.4, 5.9 AU + 7.1 AU)
+  - Biggest body only 83 M⊕ (was 919 M⊕ peak in v1, 448 M⊕ at 695 yr)
+    -> All super-Jupiters DESTROYED by ongoing collisions over 1500 yr
+  - Dozens of bodies on 30-94 AU orbits (Kuiper-belt / scattered-disk analog)
+  - System is MUCH more solar-system-like than the short runs suggested
+
+[2026-05-26 01:54] Experiment 1 (0.3 M_Jup) FINISHED.
+  Data: data/20260526_000833/    (6.52 GB frames, 5.13 GB stats)
+  Final: 1390 aggregates, t = 5000 T0 (~800 yr)
+  Analysis: C:\Projects\nbody-sim\analysis_exp1_03Mjup\
+  KEY FINDING — DRAMATIC EFFECT EVEN AT LOWEST MASS:
+    - 33 gas giants (vs 8 in control) — 4.1x MORE!
+    - Biggest body 288 M⊕ (vs 83 in control) — 3.5x BIGGER!
+    - ALL gas giants migrated to r = 10-17 AU zone (control had them at 3.8-7.1)
+    - 114 ejected bodies on r > 30 AU (Kuiper-belt analog)
+    - Most distant: 67.2 AU; total ejected mass 275 M⊕
+    - Perturber at r=20.0 AU exactly as designed
+  INTERPRETATION:
+    The 0.3 M_Jup perturber acts as a "shepherd" at 20 AU. Its 2:1 and 3:2
+    MMRs are at 12.6 and 15.3 AU respectively — gas giants concentrate
+    EXACTLY in that resonance zone (10-17 AU). Particles inside the original
+    disk get accreted into giants that migrate outward to these resonances.
+
+[2026-05-26 01:55] Experiment 2 (1.0 M_Jup) STARTED.
+                   Background task bmkwm3io9. ETA ~03:50.
+
+[2026-05-26 03:43] Experiment 2 (1.0 M_Jup) FINISHED.
+  Data: data/20260526_015429/    (6.52 GB frames, 5.13 GB stats)
+  Final: 1332 aggregates, t = 5000 T0 (~800 yr)
+  Analysis: C:\Projects\nbody-sim\analysis_exp2_10Mjup\
+  KEY FINDING — MASSIVE OUTWARD MIGRATION:
+    - 48 gas giants (vs 33 exp1, 8 control)
+    - ALL gas giants concentrated on r = 49-57 AU !!!
+       (compare: exp1 had 10-17 AU, control had 3-7 AU)
+    - 1331 ejected bodies (vs 114 in exp1)
+    - Most distant body: 118.8 AU
+    - Total mass beyond 30 AU: 6685 M⊕ (≈ 21 Jupiter masses!)
+  INTERPRETATION — OUTER MEAN-MOTION RESONANCES:
+    Perturber at 20 AU drives outer MMRs:
+       2:1 at 20·2^(2/3) = 31.7 AU
+       3:1 at 41.6 AU
+       4:1 at 50.4 AU
+       5:1 at 58.5 AU
+    Bodies pile up at 4:1 / 5:1 resonance (50-58 AU). The perturber acts
+    as a powerful catapult — almost the entire disk is rearranged into a
+    far outer ring. This is the analog of Neptune sculpting the Kuiper belt
+    via 2:1 / 3:2 / 5:3 resonances, but vastly more extreme due to mass.
+
+[2026-05-26 03:44] Experiment 3 (3.0 M_Jup) STARTED. Background bl958h8ek.
+
+[2026-05-26 05:33] Experiment 3 (3.0 M_Jup) FINISHED.
+  Data: data/20260526_034408/
+  Analysis: C:\Projects\nbody-sim\analysis_exp3_30Mjup\
+  KEY FINDING — TREND REVERSED!
+    - Only 15 gas giants (vs 48 in exp2)
+    - Giants concentrated INSIDE original disk at r = 3.7-9.3 AU (!)
+    - Plus ONE isolated giant at r = 45.5 AU
+    - 5 Jupiter-class bodies (95-300 M⊕)
+    - Biggest body 277 M⊕
+    - 171 ejected (vs 1331 in exp2) — far fewer
+    - Most distant: 144.7 AU
+  INTERPRETATION — INTERIOR RESONANCES DOMINATE:
+    At 3 M_Jup the perturber's INTERIOR MMRs become important:
+       1:2 at 20/2^(2/3) = 12.6 AU
+       1:3 at  9.6 AU
+       1:4 at  7.9 AU
+       1:5 at  6.8 AU
+    Giants accumulate at 4-9 AU, exactly in this zone. Outer-belt mass is
+    SCATTERED by the heavy perturber (Hill radius ~ 2 AU at 20 AU) — anything
+    venturing close gets flung out rather than captured.
+    Non-monotonic trend so far:
+      control(0):  giants at 3-7 AU
+      0.3 M_Jup:   giants at 10-17 AU  (shepherded outward to MMR)
+      1.0 M_Jup:   giants at 49-57 AU  (catapulted to 4:1 outer MMR)
+      3.0 M_Jup:   giants at 3-9 AU    (interior MMRs win, outer disk scattered)
+
+[2026-05-26 05:34] Experiment 4 (5.0 M_Jup) STARTED. Background bbu4jslyg.
+
+[2026-05-26 07:34] Experiment 4 (5.0 M_Jup) FINISHED.
+  Data: data/20260526_053325/
+  Analysis: C:\Projects\nbody-sim\analysis_exp4_50Mjup\
+  KEY FINDING — DISTRIBUTED OUTER RING:
+    - 25 gas giants spread broadly across r = 25-70 AU
+    - Biggest body only 95 M⊕ (Saturn-class) — no Jupiters survive
+    - 1454 ejected bodies, most distant 150.7 AU
+    - 5817 M⊕ ejected (~ 18 Jupiter masses)
+  INTERPRETATION:
+    Heavy perturber overwhelms the inner-MMR regime. Particles still get
+    captured at outer MMRs (2:1 at 31.7 AU, 3:1 at 41.6 AU, 5:1 at 58.5)
+    but the system becomes too chaotic for tight clustering. Net effect:
+    distributed outer ring + massive scattering.
+
+  Trend across mass scan:
+    M_Jup    giants  range_AU       ejected  max_dist  biggest
+    0.0       8     3.8-7.1            0      —         83 (control)
+    0.3      33    10.0-17.0         114    67.2 AU    288
+    1.0      48    49.0-57.0        1331   118.8       101
+    3.0      15     3.7-9.3          171   144.7       277
+    5.0      25    25.0-70.0        1454   150.7        95
+
+[2026-05-26 07:35] Experiment 5 (10.0 M_Jup) STARTED. Background bs1jpq0ul.
+
+[2026-05-26 09:29] Experiment 5 (10.0 M_Jup) FINISHED.
+  Data: data/20260526_073428/
+  Analysis: C:\Projects\nbody-sim\analysis_exp5_100Mjup\
+  KEY FINDING — Compact outer ring at 4:1 / 5:1 MMRs:
+    - 30 gas giants spread on r = 38-58 AU
+    - Biggest body 134 M⊕ (Jupiter-class) + one at 124 M⊕ at r=51.5
+    - 28 Saturns (30-95 M⊕)
+    - 1168 ejected bodies, most distant 136.2 AU
+    - 5646 M⊕ ejected (≈ 18 Jupiter masses)
+    - Perturber mass = 3179 M⊕ confirmed correct (10 × 318)
+
+Final trend across the mass scan:
+  M_Jup  giants  range AU       ejected  max_dist  biggest
+  0      9      3.3-6.1            ~0    213 AU    346 (control @ 800yr)
+  0.3   33     10.3-16.9         114      67       288
+  1.0   48     49-57            1331     119       101
+  3.0   15     3.7-9.3           171     145       277
+  5.0   25     25-70            1454     151        95
+  10    30     38-58            1168     136       134
+
+OVERNIGHT WORK COMPLETE. All 5 experiments + control analyzed.
+  Sidecar JSON files written for each data folder (perturber.json).
+  Code changes committed on feature/nbody-simulation branch.

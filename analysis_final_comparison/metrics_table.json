@@ -1,0 +1,15 @@
+[
+  {
+    "label": "control_800",
+    "Mj": 0.0,
+    "n_tot": 896,
+    "n_giants": 9,
+    "n_planets": 105,
+    "M_max": 346.0,
+    "M_giant_total": 1446.0,
+    "pct_disk_giants": 14.46,
+    "M_eject": 280.0,
+    "pct_disk_eject": 2.8,
+    "r_med_giants": 4.837059497833252,
+    "r_max": 213.44874572753906,
+    "peak_mass": 

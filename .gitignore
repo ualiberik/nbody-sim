@@ -1,6 +1,25 @@
-# Claude
-.claude/
-CLAUDE.md
+# Build artifacts
+build/
+*.exe
+*.obj
+*.lib
+*.pdb
 
-# Git worktrees
+# Large simulation outputs (frames.bin can be many GB)
+data/
+*.bin
+
+# Run logs
+*.log
+
+# Local tooling / editor state
+.claude/
 .worktrees/
+
+# Unity generated
+unity-visualizer/Library/
+unity-visualizer/Temp/
+unity-visualizer/Obj/
+unity-visualizer/Logs/
+unity-visualizer/UserSettings/
+unity-visualizer/[Bb]uild/

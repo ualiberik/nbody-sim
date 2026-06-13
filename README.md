@@ -11,10 +11,10 @@ tracks the emergence of planet-mass aggregates over time. A companion study
 investigates how a **fixed outer gas-giant perturber** reshapes the inner
 planetary system.
 
----
+> **About this project.** A short (~3-day) computational exploration of protoplanetary-disk dynamics. The CUDA engine and analysis pipeline were built with heavy AI assistance (Claude); my part was the experiment design (the perturber-mass sweep) and interpreting the resulting dynamical regimes.
+> This is **not** my original N-body work. I earlier wrote a full N-body gravity simulator from scratch in Unity / C# (Roche limit, star-system formation); that source wasn't preserved, but it's documented here: [YouTube ▶](https://youtu.be/286jV8SJmT8).
 
-## Author & Tooling
-This was a short (~3-day) computational exploration. The simulation engine and analysis pipeline were substantially generated with AI assistance (Claude). My role was defining the experiment (the perturber-mass sweep) and interpreting the resulting dynamical regimes.
+---
 
 ## Highlights
 

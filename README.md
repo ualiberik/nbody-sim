@@ -1,5 +1,7 @@
 # N-Body Protoplanetary Disk Simulation
 
+<img width="1286" height="682" alt="unity-visualizer - Visualizer - Windows, Mac, Linux - Unity 6 (6000 0 24f1)_ _DX11_ 5_26_2026 7_33_41 PM" src="https://github.com/user-attachments/assets/a7672bb7-ce9a-4e30-ae06-06c45da28bd0" />
+
 A GPU-accelerated N-body simulation of planet formation in a protoplanetary
 disk, with a real-time Unity visualizer and a Python analysis pipeline.
 

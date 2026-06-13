@@ -13,6 +13,9 @@ planetary system.
 
 ---
 
+## Author & Tooling
+This was a short (~3-day) computational exploration. The simulation engine and analysis pipeline were substantially generated with AI assistance (Claude). My role was defining the experiment (the perturber-mass sweep) and interpreting the resulting dynamical regimes.
+
 ## Highlights
 
 - **Barnes-Hut O(N log N) gravity** on the GPU (CUDA), opening-angle `θ` criterion
